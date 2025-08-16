@@ -1,0 +1,248 @@
+# LinkedIn Follow-Up Assistant
+
+A local CLI tool that generates tailored follow-up messages for your LinkedIn connections. Paste a connection's context, get 3 personalized follow-ups ready to copy/paste.
+
+## Features
+
+- **Smart Deduplication**: Groups similar connection reasons to avoid repetitive outreach
+- **Template-Based Generation**: Fast, reliable message templates with optional LLM enhancement  
+- **Multiple Tones**: Friendly, direct, formal, warm, playful, short-n-sweet
+- **Contact Management**: Store and organize your professional network
+- **Export Ready**: CSV/Markdown exports for easy copy/paste into LinkedIn
+- **Privacy First**: Local SQLite database, manual sending (no automation)
+
+## Quick Start
+
+### Installation
+
+```bash
+# Clone and install
+git clone <repo-url>
+cd followup-assistant
+pip install -e .
+
+# Copy environment template
+cp .env.example .env
+```
+
+### Basic Usage
+
+```bash
+# Add a contact
+followup add-contact --name "Sarah Chen" --company "DataFlow Analytics" --role "VP Engineering"
+
+# Add context about how you connected
+followup add-context --contact "Sarah Chen" --text "met at AI Summit, discussed real-time ML pipelines"
+
+# Generate follow-up suggestions
+followup suggest --contact "Sarah Chen" --tone friendly --ask "a quick 15-min call"
+```
+
+**Output:**
+```
+✓ Generated 3 follow-up variants (saved to database)
+
+Follow-up suggestions for Sarah Chen
+Tone: friendly | Ask: a quick 15-min call
+
+┌─ Variant 1 (287 chars) ─┐
+│ Hey Sarah—great        │
+│ chatting after the AI  │
+│ Summit. I liked your   │
+│ point on real-time ML  │
+│ pipelines at DataFlow  │
+│ Analytics. I saw       │
+│ you're building ML     │
+│ platform. Would a      │
+│ quick a quick 15-min   │
+│ call?                  │
+└────────────────────────┘
+```
+
+## Commands
+
+### Contact Management
+
+```bash
+# Add contact with full details
+followup add-contact \
+  --name "Jane Doe" \
+  --company "Tech Corp" \
+  --role "CTO" \
+  --url "linkedin.com/in/jane" \
+  --tags "ai,startup,hiring"
+
+# List all contacts
+followup list
+
+# Filter contacts
+followup list --contact "Jane"
+```
+
+### Context & Deduplication
+
+```bash
+# Add connection context
+followup add-context \
+  --contact "Jane Doe" \
+  --text "met at NYC MLOps meetup, she mentioned hiring for data engineers"
+
+# Merge duplicate contexts
+followup merge-dupes --contact "Jane Doe"
+```
+
+### Message Generation
+
+```bash
+# Generate with different tones
+followup suggest --contact "Jane Doe" --tone direct
+followup suggest --contact "Jane Doe" --tone formal --ask "a coffee next week"
+
+# Available tones: friendly, direct, formal, warm, playful, short-n-sweet
+```
+
+### Export & Reports
+
+```bash
+# Export to CSV
+followup export --format csv --out contacts.csv
+
+# Export to Markdown
+followup export --format md --out report.md
+
+# Export touchpoints summary
+followup export --touchpoints --contact-id 1
+```
+
+## Configuration
+
+### Environment Variables (.env)
+
+```bash
+# Model provider for LLM enhancement (optional)
+MODEL_PROVIDER=none          # none, openai, anthropic
+
+# API keys (only if using LLM)
+OPENAI_API_KEY=your_key_here
+ANTHROPIC_API_KEY=your_key_here
+
+# Database location
+DATABASE_URL=sqlite:///./followup.db
+
+# Generation settings
+DEFAULT_TONE=friendly
+MAX_MESSAGE_LENGTH=450
+```
+
+### LLM Enhancement (Optional)
+
+When `MODEL_PROVIDER` is set to `openai` or `anthropic`, messages are refined with:
+- 2-3 sentences maximum
+- Under 450 characters  
+- No excessive flattery
+- Single clear ask
+- American business tone
+
+Install AI dependencies:
+```bash
+pip install -e ".[ai]"
+```
+
+## Advanced Features
+
+### Deduplication Logic
+
+The system uses multi-layer deduplication:
+
+1. **Exact Match**: Normalized text hash comparison
+2. **Fuzzy Match**: RapidFuzz token_set_ratio ≥ 86%
+3. **N-gram Similarity**: Jaccard similarity on 3-grams ≥ 86%
+4. **Semantic Match**: Optional embeddings with cosine similarity ≥ 86%
+
+### Template Customization
+
+Edit `src/templates/followups.yaml` to customize message templates:
+
+```yaml
+friendly:
+  - "Hey {name}—great chatting after the {how_we_met}. I liked your point on {context_summary} at {company}. {why_now} Would a quick {ask}?"
+
+custom_tone:
+  - "Your custom template with {name} and {company}"
+```
+
+Available placeholders:
+- `{name}`: First name
+- `{company}`: Company name  
+- `{how_we_met}`: Extracted meeting context
+- `{why_now}`: Extracted timing/urgency
+- `{context_summary}`: Brief context summary
+- `{ask}`: What you're requesting
+
+## Development
+
+### Running Tests
+
+```bash
+# Install dev dependencies
+pip install -e ".[dev]"
+
+# Run tests
+pytest
+
+# With coverage
+pytest --cov=src
+```
+
+### Project Structure
+
+```
+src/
+├── app.py           # Typer CLI entry point
+├── models.py        # SQLAlchemy models
+├── db.py           # Database session management
+├── dedupe.py       # Deduplication logic  
+├── generator.py    # Message generation
+├── normalizer.py   # Text normalization
+├── utils.py        # Shared utilities
+├── templates/
+│   └── followups.yaml
+└── reports/
+    └── export.py   # CSV/MD exporters
+
+tests/
+├── test_dedupe.py
+├── test_templates.py  
+└── test_cli.py
+```
+
+## Privacy & Compliance
+
+- **Local First**: All data stored in local SQLite database
+- **Manual Sending**: Tool generates messages, you copy/paste manually
+- **No Automation**: No automated LinkedIn messaging or scraping
+- **Your Data**: Export anytime to CSV/Markdown
+
+## Roadmap
+
+- [ ] Tags and filtering (`--tag hiring`)
+- [ ] Next best action suggestions
+- [ ] CSV import for bulk contact addition
+- [ ] Rate limiting reminders
+- [ ] Email format templates
+
+## License
+
+MIT License - see LICENSE file for details.
+
+## Contributing
+
+1. Fork the repository
+2. Create feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit changes (`git commit -m 'Add amazing feature'`)
+4. Push to branch (`git push origin feature/amazing-feature`)  
+5. Open Pull Request
+
+## Support
+
+For issues and feature requests, please use the GitHub issue tracker.

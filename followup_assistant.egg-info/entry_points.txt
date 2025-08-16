@@ -1,0 +1,3 @@
+[console_scripts]
+followup = src.app:app
+followup-web = src.web:main
