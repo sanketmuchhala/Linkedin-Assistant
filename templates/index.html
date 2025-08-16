@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkedIn Connection Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .header {
+            background: linear-gradient(135deg, #0077b5, #005885);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .workflow-section {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .contact-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .contact-form input, .contact-form textarea {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .contact-form .full-width {
+            grid-column: 1 / -1;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+        .btn-primary { background: #0077b5; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-warning { background: #ffc107; color: black; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn:hover { opacity: 0.8; }
+        .contact-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-left: 4px solid #0077b5;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+        .status-not_sent { background: #e9ecef; color: #6c757d; }
+        .status-request_sent { background: #fff3cd; color: #856404; }
+        .status-request_accepted { background: #d4edda; color: #155724; }
+        .status-message_sent { background: #d1ecf1; color: #0c5460; }
+        .workflow-steps {
+            display: flex;
+            justify-content: space-between;
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .step {
+            flex: 1;
+            text-align: center;
+            padding: 10px;
+        }
+        .step-arrow {
+            font-size: 24px;
+            color: #0077b5;
+            margin: 0 10px;
+        }
+        .reminder-section {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔗 LinkedIn Connection Tracker</h1>
+        <p>Never forget to follow up on your LinkedIn connections again!</p>
+    </div>
+
+    <div class="workflow-section">
+        <h2>📋 How It Works</h2>
+        <div class="workflow-steps">
+            <div class="step">
+                <h3>1. Add Contact</h3>
+                <p>Enter contact details and why you want to connect</p>
+            </div>
+            <div class="step-arrow">→</div>
+            <div class="step">
+                <h3>2. Mark Request Sent</h3>
+                <p>Click when you send the LinkedIn request</p>
+            </div>
+            <div class="step-arrow">→</div>
+            <div class="step">
+                <h3>3. Mark Accepted</h3>
+                <p>Update when they accept your request</p>
+            </div>
+            <div class="step-arrow">→</div>
+            <div class="step">
+                <h3>4. Send Follow-up</h3>
+                <p>Get reminded to send a personalized message</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="workflow-section">
+        <h2>➕ Add New Contact</h2>
+        <form id="contactForm" class="contact-form">
+            <input type="text" id="name" placeholder="Full Name" required>
+            <input type="text" id="company" placeholder="Company">
+            <input type="text" id="role" placeholder="Job Title">
+            <input type="url" id="linkedin_url" placeholder="LinkedIn Profile URL">
+            <textarea id="request_reason" placeholder="Why are you connecting? (This helps you remember later!)" class="full-width" rows="3"></textarea>
+            <input type="text" id="tags" placeholder="Tags (e.g., prospect, networking, job)">
+            <textarea id="notes" placeholder="Additional notes" rows="2"></textarea>
+            <button type="submit" class="btn btn-primary full-width">Add Contact</button>
+        </form>
+    </div>
+
+    <div class="reminder-section" id="reminderSection" style="display: none;">
+        <h3>🔔 Follow-up Reminders</h3>
+        <div id="reminderList"></div>
+    </div>
+
+    <div class="workflow-section">
+        <h2>👥 Your Contacts</h2>
+        <div id="contactsList"></div>
+    </div>
+
+    <script>
+        const API_BASE = '';
+
+        // Load contacts on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadContacts();
+            loadReminders();
+        });
+
+        // Handle form submission
+        document.getElementById('contactForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                name: document.getElementById('name').value,
+                company: document.getElementById('company').value,
+                role: document.getElementById('role').value,
+                linkedin_url: document.getElementById('linkedin_url').value,
+                request_reason: document.getElementById('request_reason').value,
+                tags: document.getElementById('tags').value,
+                notes: document.getElementById('notes').value,
+                connection_status: 'not_sent'
+            };
+
+            try {
+                const response = await fetch('/contacts', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                if (response.ok) {
+                    document.getElementById('contactForm').reset();
+                    loadContacts();
+                    alert('Contact added successfully!');
+                } else {
+                    alert('Error adding contact');
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        });
+
+        // Load and display contacts
+        async function loadContacts() {
+            try {
+                const response = await fetch('/contacts');
+                const contacts = await response.json();
+                
+                const contactsList = document.getElementById('contactsList');
+                contactsList.innerHTML = '';
+
+                contacts.forEach(contact => {
+                    const contactCard = createContactCard(contact);
+                    contactsList.appendChild(contactCard);
+                });
+            } catch (error) {
+                console.error('Error loading contacts:', error);
+            }
+        }
+
+        // Load reminders
+        async function loadReminders() {
+            try {
+                const response = await fetch('/pending-followup');
+                const reminders = await response.json();
+                
+                const reminderSection = document.getElementById('reminderSection');
+                const reminderList = document.getElementById('reminderList');
+                
+                if (reminders.length > 0) {
+                    reminderSection.style.display = 'block';
+                    reminderList.innerHTML = reminders.map(contact => `
+                        <div style="margin: 10px 0; padding: 10px; background: white; border-radius: 5px;">
+                            <strong>${contact.name}</strong> from ${contact.company || 'Unknown Company'}
+                            <br><small>Reason: ${contact.request_reason || 'No reason specified'}</small>
+                            <br><small>Days since accepted: ${contact.days_since_accepted || 0}</small>
+                            <br><button class="btn btn-primary" onclick="generateMessage(${contact.id})">Connection Note</button>
+                        </div>
+                    `).join('');
+                } else {
+                    reminderSection.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Error loading reminders:', error);
+            }
+        }
+
+        // Create contact card HTML
+        function createContactCard(contact) {
+            const div = document.createElement('div');
+            div.className = 'contact-card';
+            
+            const statusClass = `status-${contact.connection_status || 'not_sent'}`;
+            const statusText = {
+                'not_sent': 'Ready to Send',
+                'request_sent': 'Request Sent',
+                'request_accepted': 'Request Accepted',
+                'message_sent': 'Message Sent'
+            }[contact.connection_status] || 'Unknown';
+
+            div.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div style="flex: 1;">
+                        <h3 style="margin: 0 0 5px 0;">${contact.name}</h3>
+                        <p style="margin: 0; color: #666;">${contact.company || 'No Company'} ${contact.role ? '• ' + contact.role : ''}</p>
+                        <div class="status-badge ${statusClass}">${statusText}</div>
+                        ${contact.request_reason ? `<p style="margin: 10px 0 5px 0; font-style: italic;">"${contact.request_reason}"</p>` : ''}
+                        ${contact.linkedin_url ? `<a href="${contact.linkedin_url}" target="_blank" style="color: #0077b5;">View Profile</a>` : ''}
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 5px;">
+                        ${getActionButtons(contact)}
+                    </div>
+                </div>
+            `;
+            
+            return div;
+        }
+
+        // Get appropriate action buttons based on status
+        function getActionButtons(contact) {
+            const status = contact.connection_status || 'not_sent';
+            
+            switch(status) {
+                case 'not_sent':
+                    return `<button class="btn btn-warning" onclick="markRequestSent(${contact.id})">Mark Request Sent</button>`;
+                case 'request_sent':
+                    return `<button class="btn btn-success" onclick="markRequestAccepted(${contact.id})">Mark Accepted</button>`;
+                case 'request_accepted':
+                    return `
+                        <button class="btn btn-primary" onclick="generateMessage(${contact.id})">Connection Note</button>
+                        <button class="btn btn-success" onclick="markMessageSent(${contact.id})">Mark Sent</button>
+                    `;
+                case 'message_sent':
+                    return `<span style="color: #28a745; font-weight: bold;">✓ Complete</span>`;
+                default:
+                    return '';
+            }
+        }
+
+        // API call functions
+        async function markRequestSent(contactId) {
+            try {
+                const response = await fetch(`/contacts/${contactId}/mark-request-sent`, {
+                    method: 'POST'
+                });
+                if (response.ok) {
+                    loadContacts();
+                    alert('Marked as request sent!');
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        async function markRequestAccepted(contactId) {
+            try {
+                const response = await fetch(`/contacts/${contactId}/mark-request-accepted`, {
+                    method: 'POST'
+                });
+                if (response.ok) {
+                    loadContacts();
+                    loadReminders();
+                    alert('Marked as accepted! Don\'t forget to send a follow-up message.');
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        async function markMessageSent(contactId) {
+            try {
+                const response = await fetch(`/contacts/${contactId}/mark-message-sent`, {
+                    method: 'POST'
+                });
+                if (response.ok) {
+                    loadContacts();
+                    loadReminders();
+                    alert('Message marked as sent!');
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        async function generateMessage(contactId) {
+            try {
+                // First, get the contact details
+                const contactResponse = await fetch(`/contacts/${contactId}`);
+                if (!contactResponse.ok) {
+                    alert('Error getting contact details');
+                    return;
+                }
+                const contact = await contactResponse.json();
+                
+                // Create a touchpoint if none exists
+                if (contact.touchpoint_count === 0) {
+                    const touchpointData = {
+                        contact_id: contactId,
+                        context: contact.request_reason || `Connection request to ${contact.name} at ${contact.company}`
+                    };
+                    
+                    const touchpointResponse = await fetch('/touchpoints', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(touchpointData)
+                    });
+                    
+                    if (!touchpointResponse.ok) {
+                        alert('Error creating context for message generation');
+                        return;
+                    }
+                }
+                
+                // Now generate the message
+                const response = await fetch(`/suggest`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        contact_id: contactId,
+                        tone: 'friendly',
+                        ask: 'a quick chat to learn more about your work'
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    showMessageModal(data.messages, contactId);
+                } else {
+                    const errorData = await response.json();
+                    alert('Error generating message: ' + (errorData.detail || 'Unknown error'));
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        function showMessageModal(messages, contactId) {
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(0,0,0,0.5); z-index: 1000; display: flex;
+                align-items: center; justify-content: center;
+            `;
+            
+            const content = document.createElement('div');
+            content.style.cssText = `
+                background: white; padding: 20px; border-radius: 10px;
+                max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;
+            `;
+            
+            content.innerHTML = `
+                <h3>Generated Follow-up Messages</h3>
+                ${messages.map((msg, i) => `
+                    <div style="border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 5px;">
+                        <h4>Option ${i + 1} (${msg.tone})</h4>
+                        <p>${msg.body}</p>
+                        <button class="btn btn-primary" onclick="copyToClipboard('${msg.body.replace(/'/g, "\\'")}')">Copy Message</button>
+                    </div>
+                `).join('')}
+                <div style="text-align: center; margin-top: 20px;">
+                    <button class="btn btn-success" onclick="markMessageSent(${contactId}); closeModal()">Mark as Sent</button>
+                    <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+                </div>
+            `;
+            
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+            
+            window.closeModal = () => modal.remove();
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Message copied to clipboard!');
+            });
+        }
+    </script>
+</body>
+</html>

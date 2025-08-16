@@ -1,5 +1,7 @@
 from typing import List, Optional
 from fastapi import FastAPI, HTTPException, Depends
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from datetime import datetime
@@ -31,6 +33,7 @@ class ContactCreate(BaseModel):
     tags: Optional[str] = None
     notes: Optional[str] = None
     request_reason: Optional[str] = None
+    connection_status: Optional[str] = None
 
 
 class ContactResponse(BaseModel):
@@ -42,6 +45,7 @@ class ContactResponse(BaseModel):
     tags: Optional[str]
     notes: Optional[str]
     request_reason: Optional[str]
+    connection_status: Optional[str]
     message_sent: bool
     last_message_date: Optional[datetime]
     touchpoint_count: int
@@ -100,8 +104,17 @@ def get_db():
         yield db
 
 
-@app.get("/")
+@app.get("/", response_class=HTMLResponse)
 def read_root():
+    """Serve the main HTML interface."""
+    try:
+        with open("templates/index.html", "r") as f:
+            return HTMLResponse(content=f.read())
+    except FileNotFoundError:
+        return HTMLResponse(content="<h1>LinkedIn Follow-Up Assistant</h1><p>Frontend not found. API is running at /docs</p>")
+
+@app.get("/api")
+def read_api_root():
     return {"message": "LinkedIn Follow-Up Assistant API"}
 
 
@@ -125,6 +138,8 @@ def create_contact(contact: ContactCreate, db: Session = Depends(get_db)):
             contact_obj.notes = contact.notes
         if contact.request_reason:
             contact_obj.request_reason = contact.request_reason
+        if contact.connection_status:
+            contact_obj.connection_status = contact.connection_status
         
         db.add(contact_obj)
         db.commit()
@@ -139,6 +154,7 @@ def create_contact(contact: ContactCreate, db: Session = Depends(get_db)):
             tags=contact_obj.tags,
             notes=contact_obj.notes,
             request_reason=contact_obj.request_reason,
+            connection_status=contact_obj.connection_status,
             message_sent=bool(contact_obj.message_sent),
             last_message_date=contact_obj.last_message_date,
             touchpoint_count=len([tp for tp in contact_obj.touchpoints if tp.is_canonical]),
@@ -164,6 +180,7 @@ def list_contacts(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
             tags=contact.tags,
             notes=contact.notes,
             request_reason=contact.request_reason,
+            connection_status=contact.connection_status,
             message_sent=bool(contact.message_sent),
             last_message_date=contact.last_message_date,
             touchpoint_count=len([tp for tp in contact.touchpoints if tp.is_canonical]),
@@ -190,6 +207,7 @@ def get_contact(contact_id: int, db: Session = Depends(get_db)):
         tags=contact.tags,
         notes=contact.notes,
         request_reason=contact.request_reason,
+        connection_status=contact.connection_status,
         message_sent=bool(contact.message_sent),
         last_message_date=contact.last_message_date,
         touchpoint_count=len([tp for tp in contact.touchpoints if tp.is_canonical]),
@@ -267,6 +285,7 @@ def generate_suggestions(request: SuggestRequest, db: Session = Depends(get_db))
                 tags=contact.tags,
                 notes=contact.notes,
                 request_reason=contact.request_reason,
+                connection_status=contact.connection_status,
                 message_sent=bool(contact.message_sent),
                 last_message_date=contact.last_message_date,
                 touchpoint_count=len([tp for tp in contact.touchpoints if tp.is_canonical]),
@@ -331,7 +350,7 @@ def get_available_tones():
     }
 
 
-@app.post("/contacts/{contact_id}/mark-sent")
+@app.post("/contacts/{contact_id}/mark-message-sent")
 def mark_message_sent(contact_id: int, db: Session = Depends(get_db)):
     """Mark that a message has been sent to this contact."""
     contact = db.query(Contact).filter(Contact.id == contact_id).first()
@@ -341,6 +360,7 @@ def mark_message_sent(contact_id: int, db: Session = Depends(get_db)):
     contact.message_sent = 1
     contact.last_message_date = datetime.utcnow()
     contact.outreach_status = "contacted"
+    contact.connection_status = "message_sent"
     db.commit()
     db.refresh(contact)
     
@@ -361,6 +381,54 @@ def mark_response_received(contact_id: int, db: Session = Depends(get_db)):
     db.refresh(contact)
     
     return {"message": "Response marked", "contact_id": contact_id}
+
+
+@app.post("/contacts/{contact_id}/mark-request-sent")
+def mark_request_sent(contact_id: int, db: Session = Depends(get_db)):
+    """Mark that a connection request has been sent to this contact."""
+    contact = db.query(Contact).filter(Contact.id == contact_id).first()
+    if not contact:
+        raise HTTPException(status_code=404, detail="Contact not found")
+    
+    contact.connection_status = "request_sent"
+    db.commit()
+    db.refresh(contact)
+    
+    return {"message": "Connection request marked as sent", "contact_id": contact_id}
+
+
+@app.post("/contacts/{contact_id}/mark-request-accepted")
+def mark_request_accepted(contact_id: int, db: Session = Depends(get_db)):
+    """Mark that the connection request was accepted."""
+    contact = db.query(Contact).filter(Contact.id == contact_id).first()
+    if not contact:
+        raise HTTPException(status_code=404, detail="Contact not found")
+    
+    contact.connection_status = "request_accepted"
+    db.commit()
+    db.refresh(contact)
+    
+    return {"message": "Connection request marked as accepted", "contact_id": contact_id}
+
+
+@app.get("/pending-followup")
+def get_pending_followup_contacts(db: Session = Depends(get_db)):
+    """Get contacts that have accepted connection requests but haven't been messaged."""
+    contacts = db.query(Contact).filter(
+        Contact.connection_status == "request_accepted",
+        Contact.message_sent == 0
+    ).all()
+    
+    return [
+        {
+            "id": contact.id,
+            "name": contact.name,
+            "company": contact.company,
+            "request_reason": contact.request_reason,
+            "days_since_accepted": (datetime.utcnow() - contact.updated_at).days if contact.updated_at else None
+        }
+        for contact in contacts
+    ]
 
 
 @app.get("/analytics/dashboard")

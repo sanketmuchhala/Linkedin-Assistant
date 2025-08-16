@@ -33,6 +33,7 @@ class Contact(Base):
     priority_level = Column(String(50), default='medium')  # high, medium, low
     follow_up_scheduled = Column(DateTime, nullable=True)
     outreach_status = Column(String(50), default='pending')  # pending, contacted, responded, connected, closed
+    connection_status = Column(String(50), default='not_sent')  # not_sent, request_sent, request_accepted, message_sent
     
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
