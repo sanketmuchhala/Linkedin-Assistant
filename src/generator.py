@@ -132,6 +132,8 @@ def refine_with_llm(message: str, tone: str) -> str:
             return refine_with_openai(message, tone)
         elif MODEL_PROVIDER == "anthropic":
             return refine_with_anthropic(message, tone)
+        elif MODEL_PROVIDER == "deepseek":
+            return refine_with_deepseek(message, tone)
     except Exception as e:
         print(f"LLM refinement failed: {e}")
     
@@ -206,6 +208,81 @@ Refined message:"""
         
     except Exception as e:
         print(f"Anthropic refinement error: {e}")
+        return message
+
+
+def refine_with_deepseek(message: str, tone: str) -> str:
+    """Refine message using DeepSeek."""
+    try:
+        import requests
+        
+        api_key = os.getenv("DEEPSEEK_API_KEY")
+        if not api_key:
+            return message
+        
+        prompt = f"""Write a LinkedIn follow-up message with a {tone} tone.
+
+Context: {message}
+
+Requirements:
+- 2-3 sentences maximum
+- Under 300 characters 
+- No excessive flattery or buzzwords
+- One clear, specific ask
+- Natural and conversational
+- Ready to copy-paste (no extra formatting)
+
+Message:"""
+
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}"
+        }
+        
+        data = {
+            "model": "deepseek-chat",
+            "messages": [
+                {"role": "user", "content": prompt}
+            ],
+            "max_tokens": 150,
+            "temperature": 0.7
+        }
+        
+        response = requests.post(
+            "https://api.deepseek.com/chat/completions",
+            headers=headers,
+            json=data,
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            result = response.json()
+            refined = result["choices"][0]["message"]["content"].strip()
+            
+            # Clean up the response - extract just the message content
+            # Remove quotes, character counts, and explanations
+            import re
+            
+            # Extract content between quotes if present
+            quote_match = re.search(r'"([^"]+)"', refined)
+            if quote_match:
+                refined = quote_match.group(1)
+            else:
+                # If no quotes, take the first line that looks like a message
+                lines = refined.split('\n')
+                for line in lines:
+                    line = line.strip()
+                    if line and not line.startswith('(') and not line.startswith('**') and len(line) > 20:
+                        refined = line
+                        break
+            
+            return truncate_message(refined)
+        else:
+            print(f"DeepSeek API error: {response.status_code}")
+            return message
+        
+    except Exception as e:
+        print(f"DeepSeek refinement error: {e}")
         return message
 
 

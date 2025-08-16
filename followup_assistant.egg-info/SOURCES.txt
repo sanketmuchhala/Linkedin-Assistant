@@ -16,6 +16,8 @@ src/models.py
 src/normalizer.py
 src/utils.py
 src/web.py
+src/web_modern.py
+src/web_new.py
 src/reports/__init__.py
 src/reports/export.py
 tests/test_cli.py

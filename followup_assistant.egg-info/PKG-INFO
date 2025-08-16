@@ -15,6 +15,7 @@ Requires-Dist: fastapi>=0.104.0
 Requires-Dist: uvicorn>=0.24.0
 Requires-Dist: jinja2>=3.1.0
 Requires-Dist: python-multipart>=0.0.6
+Requires-Dist: requests>=2.31.0
 Provides-Extra: ai
 Requires-Dist: sentence-transformers>=2.0.0; extra == "ai"
 Requires-Dist: openai>=1.0.0; extra == "ai"
