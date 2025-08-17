@@ -1,3 +1,4 @@
+import os
 import uvicorn
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -606,11 +607,12 @@ async def get_index():
 
 
 def main():
+    port = int(os.environ.get("PORT", 8000))
     uvicorn.run(
         "src.web:app",
-        host="127.0.0.1",
-        port=8000,
-        reload=True
+        host="0.0.0.0",
+        port=port,
+        reload=False
     )
 
 
