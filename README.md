@@ -2,6 +2,11 @@
 
 A black-mode-first application for managing LinkedIn connections with AI-powered personalized messages and pipeline tracking.
 
+<img width="1680" height="1050" alt="Screenshot 2025-09-14 at 2 39 21 PM" src="https://github.com/user-attachments/assets/9f3d0681-6494-42c4-b997-958c15cf2af7" />
+<img width="1680" height="1050" alt="Screenshot 2025-09-14 at 2 39 28 PM" src="https://github.com/user-attachments/assets/e13cc01e-ca36-40b6-8b66-a85dbe9ee697" />
+<img width="1680" height="1050" alt="Screenshot 2025-09-14 at 2 39 40 PM" src="https://github.com/user-attachments/assets/b8b967e6-bac6-4cf8-a01d-3a275b9871d7" />
+
+
 ## Features
 
 - 🎨 **Dark Mode First**: True black background (#000) with accessible contrast
