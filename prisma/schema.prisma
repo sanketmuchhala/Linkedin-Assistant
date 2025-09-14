@@ -1,0 +1,35 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model ConnectionRecord {
+  id              String    @id @default(cuid())
+  fullName        String
+  role            String?
+  company         String?
+  linkedinUrl     String
+  source          String    // event|post|referral|news|cold
+  whyConnect      String
+  sharedTopics    String    @default("[]") // JSON array as string
+  evidence        String    @default("[]") // JSON array as string
+  tone            String?   // friendly|professional|enthusiastic|warm|curious
+  doNotDo         String    @default("[]") // JSON array as string
+  goal            String?   // informational_chat|collab|intro|share_portfolio|job_referral|hiring
+  cta             String?
+  tags            String    @default("[]") // JSON array as string
+  status          String    @default("DRAFT") // DRAFT|REQUESTED|ACCEPTED|IN_CONVO|ARCHIVED
+  connectionNote  String?   // last generated
+  acceptanceDM    String?   // last generated
+  nextActionDate  DateTime?
+  nextActionLabel String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
